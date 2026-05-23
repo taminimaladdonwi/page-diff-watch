@@ -1,60 +1,59 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadSnapshots, saveSnapshots, getSnapshot, setSnapshot, removeSnapshot } from './snapshotStore.js';
-
-vi.mock('fs/promises', () => ({
-  default: {
-    readFile: vi.fn(),
-    writeFile: vi.fn(),
-    mkdir: vi.fn(),
-  },
-}));
-
+import { loadSnapshot, saveSnapshot, deleteSnapshot, listSnapshots } from './snapshotStore.js';
 import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const MOCK_SNAPSHOTS = { 'https://example.com': 'abc123' };
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SNAPSHOTS_DIR = path.resolve(__dirname, '../../data/snapshots');
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  fs.readFile.mockResolvedValue(JSON.stringify(MOCK_SNAPSHOTS));
-  fs.writeFile.mockResolvedValue(undefined);
-  fs.mkdir.mockResolvedValue(undefined);
+const TEST_ID = 'https://example.com/test-page';
+const TEST_DATA = { hash: 'abc123', content: '<html>hello</html>' };
+
+afterEach(async () => {
+  await deleteSnapshot(TEST_ID).catch(() => {});
 });
 
-describe('loadSnapshots', () => {
-  it('returns parsed JSON from file', async () => {
-    const result = await loadSnapshots();
-    expect(result).toEqual(MOCK_SNAPSHOTS);
-  });
-
-  it('returns empty object when file not found', async () => {
-    fs.readFile.mockRejectedValue(Object.assign(new Error(), { code: 'ENOENT' }));
-    const result = await loadSnapshots();
-    expect(result).toEqual({});
-  });
-});
-
-describe('getSnapshot', () => {
-  it('returns hash for known url', async () => {
-    expect(await getSnapshot('https://example.com')).toBe('abc123');
-  });
-
-  it('returns null for unknown url', async () => {
-    expect(await getSnapshot('https://unknown.com')).toBeNull();
+describe('saveSnapshot', () => {
+  test('saves and returns snapshot with metadata', async () => {
+    const result = await saveSnapshot(TEST_ID, TEST_DATA);
+    expect(result.id).toBe(TEST_ID);
+    expect(result.hash).toBe(TEST_DATA.hash);
+    expect(result.content).toBe(TEST_DATA.content);
+    expect(result.savedAt).toBeDefined();
   });
 });
 
-describe('setSnapshot', () => {
-  it('writes updated snapshots', async () => {
-    await setSnapshot('https://new.com', 'def456');
-    const written = JSON.parse(fs.writeFile.mock.calls[0][1]);
-    expect(written['https://new.com']).toBe('def456');
+describe('loadSnapshot', () => {
+  test('returns null when snapshot does not exist', async () => {
+    const result = await loadSnapshot('nonexistent-id');
+    expect(result).toBeNull();
+  });
+
+  test('loads a previously saved snapshot', async () => {
+    await saveSnapshot(TEST_ID, TEST_DATA);
+    const loaded = await loadSnapshot(TEST_ID);
+    expect(loaded.hash).toBe(TEST_DATA.hash);
+    expect(loaded.content).toBe(TEST_DATA.content);
   });
 });
 
-describe('removeSnapshot', () => {
-  it('removes the url from snapshots', async () => {
-    await removeSnapshot('https://example.com');
-    const written = JSON.parse(fs.writeFile.mock.calls[0][1]);
-    expect(written['https://example.com']).toBeUndefined();
+describe('deleteSnapshot', () => {
+  test('returns true when snapshot is deleted', async () => {
+    await saveSnapshot(TEST_ID, TEST_DATA);
+    const result = await deleteSnapshot(TEST_ID);
+    expect(result).toBe(true);
+  });
+
+  test('returns false when snapshot does not exist', async () => {
+    const result = await deleteSnapshot('nonexistent-id');
+    expect(result).toBe(false);
+  });
+});
+
+describe('listSnapshots', () => {
+  test('includes saved snapshot id in list', async () => {
+    await saveSnapshot(TEST_ID, TEST_DATA);
+    const list = await listSnapshots();
+    expect(Array.isArray(list)).toBe(true);
   });
 });

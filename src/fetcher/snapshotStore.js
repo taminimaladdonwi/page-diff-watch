@@ -1,59 +1,55 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const DATA_DIR = path.resolve('data');
-const SNAPSHOT_FILE = path.join(DATA_DIR, 'snapshots.json');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SNAPSHOTS_DIR = path.resolve(__dirname, '../../data/snapshots');
 
-/**
- * Loads the snapshot map from disk.
- * @returns {Promise<Record<string, string>>} url -> hash
- */
-export async function loadSnapshots() {
+export async function ensureSnapshotsDir() {
+  await fs.mkdir(SNAPSHOTS_DIR, { recursive: true });
+}
+
+function snapshotPath(id) {
+  const safeId = encodeURIComponent(id).replace(/%/g, '_');
+  return path.join(SNAPSHOTS_DIR, `${safeId}.json`);
+}
+
+export async function loadSnapshot(id) {
   try {
-    const raw = await fs.readFile(SNAPSHOT_FILE, 'utf8');
+    const raw = await fs.readFile(snapshotPath(id), 'utf-8');
     return JSON.parse(raw);
   } catch (err) {
-    if (err.code === 'ENOENT') return {};
+    if (err.code === 'ENOENT') return null;
     throw err;
   }
 }
 
-/**
- * Saves the snapshot map to disk.
- * @param {Record<string, string>} snapshots
- */
-export async function saveSnapshots(snapshots) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(SNAPSHOT_FILE, JSON.stringify(snapshots, null, 2), 'utf8');
+export async function saveSnapshot(id, data) {
+  await ensureSnapshotsDir();
+  const payload = {
+    id,
+    hash: data.hash,
+    content: data.content,
+    savedAt: new Date().toISOString(),
+  };
+  await fs.writeFile(snapshotPath(id), JSON.stringify(payload, null, 2), 'utf-8');
+  return payload;
 }
 
-/**
- * Returns the stored hash for a URL, or null if not found.
- * @param {string} url
- * @returns {Promise<string|null>}
- */
-export async function getSnapshot(url) {
-  const snapshots = await loadSnapshots();
-  return snapshots[url] ?? null;
+export async function deleteSnapshot(id) {
+  try {
+    await fs.unlink(snapshotPath(id));
+    return true;
+  } catch (err) {
+    if (err.code === 'ENOENT') return false;
+    throw err;
+  }
 }
 
-/**
- * Stores (or updates) the hash for a URL.
- * @param {string} url
- * @param {string} hash
- */
-export async function setSnapshot(url, hash) {
-  const snapshots = await loadSnapshots();
-  snapshots[url] = hash;
-  await saveSnapshots(snapshots);
-}
-
-/**
- * Removes the snapshot for a URL.
- * @param {string} url
- */
-export async function removeSnapshot(url) {
-  const snapshots = await loadSnapshots();
-  delete snapshots[url];
-  await saveSnapshots(snapshots);
+export async function listSnapshots() {
+  await ensureSnapshotsDir();
+  const files = await fs.readdir(SNAPSHOTS_DIR);
+  return files
+    .filter(f => f.endsWith('.json'))
+    .map(f => decodeURIComponent(f.replace(/_/g, '%').replace(/\.json$/, '')));
 }
