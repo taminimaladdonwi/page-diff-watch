@@ -44,6 +44,22 @@ function msUntilNextFetch(url, minDelayMs = DEFAULT_MIN_DELAY_MS) {
 }
 
 /**
+ * Returns a Promise that resolves once the rate limit for the given URL has
+ * been satisfied, then records the fetch timestamp.
+ * Useful for callers that want to await the delay inline.
+ * @param {string} url
+ * @param {number} minDelayMs
+ * @returns {Promise<void>}
+ */
+async function waitAndRecord(url, minDelayMs = DEFAULT_MIN_DELAY_MS) {
+  const wait = msUntilNextFetch(url, minDelayMs);
+  if (wait > 0) {
+    await new Promise((resolve) => setTimeout(resolve, wait));
+  }
+  recordFetch(url);
+}
+
+/**
  * Clears rate-limit state for a URL (useful for testing or manual resets).
  * @param {string} url
  */
@@ -56,4 +72,4 @@ function resetAll() {
   lastFetchMap.clear();
 }
 
-module.exports = { canFetch, recordFetch, msUntilNextFetch, resetUrl, resetAll, DEFAULT_MIN_DELAY_MS };
+module.exports = { canFetch, recordFetch, msUntilNextFetch, waitAndRecord, resetUrl, resetAll, DEFAULT_MIN_DELAY_MS };
