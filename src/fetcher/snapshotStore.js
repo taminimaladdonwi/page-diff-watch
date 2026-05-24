@@ -53,3 +53,17 @@ export async function listSnapshots() {
     .filter(f => f.endsWith('.json'))
     .map(f => decodeURIComponent(f.replace(/_/g, '%').replace(/\.json$/, '')));
 }
+
+/**
+ * Returns the snapshot for the given id only if it exists and its hash
+ * differs from the provided hash. Useful for skipping unchanged pages.
+ *
+ * @param {string} id - The snapshot identifier.
+ * @param {string} hash - The current hash to compare against.
+ * @returns {object|null} The stored snapshot if the hash changed, otherwise null.
+ */
+export async function loadSnapshotIfChanged(id, hash) {
+  const snapshot = await loadSnapshot(id);
+  if (!snapshot || snapshot.hash === hash) return null;
+  return snapshot;
+}
