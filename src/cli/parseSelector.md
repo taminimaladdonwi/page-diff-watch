@@ -1,42 +1,42 @@
 # parseSelector
 
-Utility for validating and parsing CSS selectors used to target specific page content.
+Utility for parsing and validating CSS selectors used to scope page diff monitoring.
 
 ## Functions
 
 ### `validateSelector(selector)`
 
-Checks whether a CSS selector string is syntactically valid.
+Returns `true` if the selector string is a valid CSS selector, `false` otherwise.
 
-**Returns:** `boolean`
+```js
+validateSelector('div.content') // true
+validateSelector('###bad')      // false
+```
 
 ### `parseSelector(input)`
 
-Parses and normalizes a selector string.
+Parses a raw string input into a normalized selector object.
 
-**Returns:** `{ selector: string, label: string }` where `label` is a short human-readable description.
-
-**Throws:** `Error` if the selector is empty or invalid.
-
-### `formatSelector(parsed)`
-
-Converts a parsed selector object back to a display string.
-
-**Returns:** `string`
-
-## Supported Selector Types
-
-- Element selectors: `body`, `main`, `article`
-- Class selectors: `.content`, `.article-body`
-- ID selectors: `#main-content`
-- Attribute selectors: `[data-content]`
-- Combined: `div.content > p`
-
-## Examples
+Returns `{ selector, label }` or throws if invalid.
 
 ```js
-parseSelector('#main')        // { selector: '#main', label: 'id:main' }
-parseSelector('.article')     // { selector: '.article', label: 'class:article' }
-validateSelector('div > p')   // true
-validateSelector('')          // false
+parseSelector('div.content')
+// => { selector: 'div.content', label: 'div.content' }
+
+parseSelector('main article:label=Article Body')
+// => { selector: 'main article', label: 'Article Body' }
 ```
+
+### `formatSelector(selectorObj)`
+
+Formats a selector object back to a display string.
+
+```js
+formatSelector({ selector: 'div.content', label: 'Content' })
+// => 'div.content (Content)'
+```
+
+## Notes
+
+- Selector validation uses `document.querySelector` in a JSDOM context or a try/catch heuristic in Node.
+- Labels are optional and default to the selector string itself.
