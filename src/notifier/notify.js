@@ -42,12 +42,33 @@ export function notifyChange({ url, label, diff } = {}) {
  */
 export function notifyError({ url, error } = {}) {
   if (!url) throw new Error('notifyError requires a url');
+  if (!error) throw new Error('notifyError requires an error');
 
   notifier.notify({
     title: 'Page Watch Error',
     message: `Failed to check ${url}: ${truncate(String(error), 80)}`,
     icon: ICON_PATH,
     sound: false,
+  });
+}
+
+/**
+ * Sends a desktop notification with a custom title and message.
+ * Useful for general status updates (e.g. watcher started/stopped).
+ * @param {object} options
+ * @param {string} options.title - Notification title
+ * @param {string} options.message - Notification body
+ */
+export function notifyInfo({ title, message } = {}) {
+  if (!title) throw new Error('notifyInfo requires a title');
+  if (!message) throw new Error('notifyInfo requires a message');
+
+  notifier.notify({
+    title,
+    message: truncate(message, 120),
+    icon: ICON_PATH,
+    sound: false,
+    wait: false,
   });
 }
 
