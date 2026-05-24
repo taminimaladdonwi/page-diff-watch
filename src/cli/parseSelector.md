@@ -1,50 +1,42 @@
 # parseSelector
 
-Utility module for parsing and validating CSS selectors supplied via the CLI when adding a watch entry.
+Utility for validating and parsing CSS selectors used to target specific page content.
 
-## Purpose
+## Functions
 
-When a user adds a URL to the watchlist they may optionally provide a CSS selector (`--selector`) to restrict change detection to a specific region of the page rather than the entire document body.
+### `validateSelector(selector)`
 
-This module ensures the selector is safe and well-formed before it is persisted to the watchlist.
+Checks whether a CSS selector string is syntactically valid.
 
-## API
+**Returns:** `boolean`
 
-### `parseSelector(raw: string | undefined) → { selector, error }`
+### `parseSelector(input)`
 
-Parses a raw string from the CLI.
+Parses and normalizes a selector string.
 
-- If `raw` is `undefined`, `null`, or `''`, returns `{ selector: null, error: null }` — meaning "watch the whole page".
-- If the selector is valid, returns `{ selector: trimmedString, error: null }`.
-- If the selector is invalid, returns `{ selector: null, error: 'reason...' }`.
+**Returns:** `{ selector: string, label: string }` where `label` is a short human-readable description.
 
-### `validateSelector(selector: string) → string | null`
+**Throws:** `Error` if the selector is empty or invalid.
 
-Returns `null` when the selector is acceptable, or a human-readable error message when it is not.
+### `formatSelector(parsed)`
 
-Rules enforced:
-- Must be a non-empty string.
-- Must not exceed 256 characters.
-- Must not target `script` or `style` elements directly (security / noise prevention).
+Converts a parsed selector object back to a display string.
 
-### `formatSelector(selector: string | null) → string`
+**Returns:** `string`
 
-Formats a selector for display in CLI output.
+## Supported Selector Types
 
-| Input | Output |
-|-------|--------|
-| `null` / `undefined` | `(whole page)` |
-| `"#content"` | `"#content"` |
+- Element selectors: `body`, `main`, `article`
+- Class selectors: `.content`, `.article-body`
+- ID selectors: `#main-content`
+- Attribute selectors: `[data-content]`
+- Combined: `div.content > p`
 
-## Usage
+## Examples
 
 ```js
-const { parseSelector, formatSelector } = require('./parseSelector');
-
-const { selector, error } = parseSelector(argv.selector);
-if (error) {
-  console.error(`Invalid selector: ${error}`);
-  process.exit(1);
-}
-console.log(`Watching: ${formatSelector(selector)}`);
+parseSelector('#main')        // { selector: '#main', label: 'id:main' }
+parseSelector('.article')     // { selector: '.article', label: 'class:article' }
+validateSelector('div > p')   // true
+validateSelector('')          // false
 ```
