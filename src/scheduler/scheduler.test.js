@@ -56,6 +56,15 @@ describe('runChecks', () => {
     expect(notifyChange).toHaveBeenCalledWith('https://example.com', 'some diff');
   });
 
+  it('does not call notifyChange when no change is detected', async () => {
+    loadWatchlist.mockResolvedValue([{ url: 'https://example.com' }]);
+    checkForChanges.mockResolvedValue({ changed: false });
+
+    await runChecks();
+
+    expect(notifyChange).not.toHaveBeenCalled();
+  });
+
   it('calls notifyError when checkForChanges throws', async () => {
     const error = new Error('network failure');
     loadWatchlist.mockResolvedValue([{ url: 'https://broken.com' }]);
