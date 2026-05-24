@@ -15,6 +15,8 @@ Filters lines of a text string based on include/exclude patterns.
 
 **Returns:** `{string}` — Filtered multi-line string
 
+**Throws:** `{TypeError}` — If `content` is not a string, or if `include`/`exclude` options are provided but are not arrays
+
 **Example:**
 ```js
 const { filterContent } = require('./pageFilter');
@@ -40,6 +42,25 @@ Normalizes whitespace in content:
 - Trims leading/trailing whitespace from the result
 
 Useful for reducing noise in diffs caused by formatting changes.
+
+### `countFilteredLines(original, filtered)`
+
+Returns a summary of how many lines were removed during filtering.
+
+**Parameters:**
+- `original` `{string}` — The content before filtering
+- `filtered` `{string}` — The content after filtering
+
+**Returns:** `{object}` — An object with `{ original, kept, removed }` line counts
+
+**Example:**
+```js
+const { filterContent, countFilteredLines } = require('./pageFilter');
+
+const filtered = filterContent(pageText, { exclude: ['advertisement'] });
+const stats = countFilteredLines(pageText, filtered);
+console.log(`Removed ${stats.removed} of ${stats.original} lines`);
+```
 
 ## Usage in Pipeline
 
